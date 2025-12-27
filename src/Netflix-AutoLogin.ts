@@ -1,8 +1,8 @@
 import { type BrowserContext, chromium, type Page } from 'playwright';
 import { spawn } from 'child_process';
-// import * as dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
-// dotenv.config();
+dotenv.config();
 
 // Minimize the Chrome window via CDP to reduce on-screen presence during automation
 async function minimizeChromeWindow(context: BrowserContext, page: Page) {
@@ -47,10 +47,14 @@ async function maximizeChromeWindow(context: BrowserContext, page: Page) {
 async function main() {
   // console.log('Starting Playwright...');
 
-  const chromePath = 'C:\\Users\\AngeloHu\\WorkSpace\\AutoitScript\\Chrome\\chrome.exe';
-  const userDataDir = 'C:\\Users\\AngeloHu\\WorkSpace\\AutoitScript\\UserData';
+  const chromePath = process.env.CHROME_PATH;
+  const userDataDir = process.env.USER_DATA_DIR;
   const remoteDebuggingPort = 9222;
-  const appUrl = 'https://www.netflix.com/tw/login';
+  const appUrl = process.env.APP_URL;
+
+  if (!chromePath || !userDataDir || !appUrl) {
+    throw new Error('Missing required environment variables: CHROME_PATH, USER_DATA_DIR, or APP_URL');
+  }
 
   let browser;
   let context;
@@ -136,15 +140,37 @@ async function main() {
       return;
     }
 
-    // 步驟2: 讀取.env並自動填入帳號密碼
-    // const username = process.env.Netflix_User01;
-    const username = "your-email@example.com";
-    // const password = process.env.Netflix_Pass01;
-    const password = "5568877";
+    // 步驟2: 從.env讀取並隨機選擇一組帳號密碼
+    const credentials = [
+      {
+        username: process.env.NETFLIX_USER_01 || '',
+        password: process.env.NETFLIX_PASS_01 || '',
+      },
+      {
+        username: process.env.NETFLIX_USER_02 || '',
+        password: process.env.NETFLIX_PASS_02 || '',
+      },
+      {
+        username: process.env.NETFLIX_USER_03 || '',
+        password: process.env.NETFLIX_PASS_03 || '',
+      },
+    ];
+
+    // 隨機選擇一組帳號密碼
+    const randomIndex = Math.floor(Math.random() * credentials.length);
+    const credential = credentials[randomIndex];
+    
+    if (!credential) {
+      throw new Error('Unable to select credentials');
+    }
+    
+    const { username, password } = credential;
 
     if (!username || !password) {
       throw new Error('Netflix帳號或密碼未在.env中設定');
     }
+
+    console.log(`Using credentials set #${randomIndex + 1}...`);
 
     console.log('Found credentials, attempting to login...');
 
@@ -223,7 +249,7 @@ async function main() {
           const button = await page.$(selector);
           if (button) {
             console.log(`Found login button with selector: ${selector}`);
-            await button.click();
+            // await button.click();
             loginButtonFound = true;
             break;
           }
